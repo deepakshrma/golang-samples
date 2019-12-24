@@ -9,3 +9,6 @@ bechmark:
 # Patter test case match "Calc" only
 bechmark-calc:
 	go test github.com/golang_samples/golang-benchmark -run=Calc -bench=.
+	
+lookup:
+	$(MAKE) -C golang-lookup-cli test

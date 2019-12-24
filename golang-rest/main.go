@@ -6,9 +6,14 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
+	"sync"
 
 	"github.com/gorilla/mux"
 )
+
+var counter int
+var mutex = &sync.Mutex{}
 
 type Article struct {
 	ID      string `json:"Id"`
@@ -89,7 +94,12 @@ func jsonResponse(next http.Handler) http.Handler {
 		log.Println("Executing middlewareOne again")
 	})
 }
-
+func incrementCounter(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	counter++
+	fmt.Fprintf(w, strconv.Itoa(counter))
+	mutex.Unlock()
+}
 func handleRequests() {
 	// http.HandleFunc("/", homePage)
 	// // add our articles route and map it to our
@@ -98,6 +108,10 @@ func handleRequests() {
 	// log.Fatal(http.ListenAndServe(":10000", nil))
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/", homePage)
+	// router.Handle("/", http.FileServer(http.Dir("./static")))
+	// This will serve files under http://localhost:8000/static/<filename>
+	router.PathPrefix("/welcome/").Handler(http.StripPrefix("/welcome", http.FileServer(http.Dir("./static"))))
+
 	router.Handle("/articles", jsonResponse(http.HandlerFunc(returnAllArticles)))
 	router.HandleFunc("/article", createNewArticle).Methods("POST")
 	router.HandleFunc("/article/{id}", deleteArticle).Methods("DELETE")
@@ -105,6 +119,7 @@ func handleRequests() {
 	// finally, instead of passing in nil, we want
 	// to pass in our newly created router as the second
 	// argument
+	router.HandleFunc("/increment", incrementCounter)
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
